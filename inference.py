@@ -175,7 +175,7 @@ def main():
 
 
             # ===== [Step 2.2] pSp 인코딩 =====
-            os.chdir("/home/ubuntu/Barbershop-Plus-Plus/pixel2style2pixel/")
+            # os.chdir("/home/ubuntu/Barbershop-Plus-Plus/pixel2style2pixel/")
             subprocess.call("/home/ubuntu/Barbershop-Plus-Plus/psp_encoding.py", shell=True)
 
 
@@ -191,11 +191,11 @@ def main():
                 object_name = '/ai_result/' + param_member_id + '/' + param_virtual_member_image_id + '_' + (i+1) + '.jpg' 
                 response = create_presigned_post(object_name)
                 if response is None:
-                    exit(1)
+                    continue
 
                 # Demonstrate how another Python program can use the presigned URL to upload a file
-                result_image_name = '/home/ubuntu/Barbershop-Plus-Plus/Barbershop/'
-                with open(object_name, 'rb') as f:
+                result_image_name = '/home/ubuntu/Barbershop-Plus-Plus/Barbershop/output/input_image_' + (i+1) + '_' + (i+1) + '_realistic.png'
+                with open(result_image_name, 'rb') as f:
                     files = {'file': (object_name, f)}
                     http_response = requests.post(response['url'], data=response['fields'], files=files)
                 # If successful, returns HTTP status code 204
@@ -220,10 +220,45 @@ def main():
 
                 raise error
             
-            
+            # ===== [Step 5] inference 된 결과 및 input 이미지 데이터 지우기 =====
+            # unprocessed
+            delete_preprocessing_input_cmd = 'rm ' + '/home/ubuntu/Barbershop-Plus-Plus/Barbershop/unprocessed/input_image.jpg'
+            subprocess.call(delete_preprocessing_input_cmd, shell=True)
 
 
+            # input/face
+            delete_align_input_face_cmd = 'rm  ' + '/home/ubuntu/Barbershop-Plus-Plus/Barbershop/input/face/input_image.png'
+            subprocess.call(delete_align_input_face_cmd, shell=True)
 
+            # output/W+
+            delete_output_W_img_cmd = 'rm ' + '/home/ubuntu/Barbershop-Plus-Plus/Barbershop/output/W+/input_image.png'
+            delete_output_W_npy_cmd = 'rm ' + '/home/ubuntu/Barbershop-Plus-Plus/Barbershop/output/W+/input_image.npy'
+            subprocess.call(delete_output_W_img_cmd, shell=True)
+            subprocess.call(delete_output_W_npy_cmd, shell=True)
+
+            # output/FS
+            delete_output_FS_img_cmd = 'rm ' + '/home/ubuntu/Barbershop-Plus-Plus/Barbershop/output/FS/input_image.png'
+            delete_output_FS_npy_cmd = 'rm ' + '/home/ubuntu/Barbershop-Plus-Plus/Barbershop/output/FS/input_image.npy'
+            subprocess.call(delete_output_FS_img_cmd, shell=True)
+            subprocess.call(delete_output_FS_npy_cmd, shell=True)
+
+            # result - via_mask
+            for i in range(5):
+                delete_result_mask_cmd = 'rm ' + '/home/ubuntu/Barbershop-Plus-Plus/Barbershop/output/vis_mask_input_image_' + (i + 1) + '_realistic.png'
+                subprocess.call(delete_result_mask_cmd, shell=True)
+
+            # result - align
+            delete_result_align_cmd = 'rm -rf /home/ubuntu/Barbershop-Plus-Plus/Barbershop/output/Align_realistic/'
+            subprocess.call(delete_result_align_cmd, shell=True)
+
+            # result - blend
+            delete_result_blend_cmd = 'rm -rf /home/ubuntu/Barbershop-Plus-Plus/Barbershop/output/Blend_realistic/'
+            subprocess.call(delete_result_blend_cmd, shell=True)
+
+            # result - final
+            for i in range(5):
+                delete_result_real_cmd = 'rm ' + '/home/ubuntu/Barbershop-Plus-Plus/Barbershop/output/input_image_' + (i + 1) + '_' + (i + 1) + '_realistic.png'
+                subprocess.call(delete_result_real_cmd, shell=True)
 
 if __name__ == "__main__":
 	main()
