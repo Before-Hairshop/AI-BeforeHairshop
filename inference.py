@@ -180,8 +180,12 @@ def main():
                 for file in os.listdir("/home/ubuntu/Barbershop-Plus-Plus/Barbershop/input/face"):
                     if file == "1.png" or file == "2.png" or file == "3.png" or file == "4.png" or file == "5.png":
                         continue
+                
                     delete_cmd = "rm /home/ubuntu/Barbershop-Plus-Plus/Barbershop/input/face/" + file
                     subprocess.call(delete_cmd, shell=True)
+
+                delete_unprocess_cmd = "rm /home/ubuntu/Barbershop-Plus-Plus/Barbershop/unprocessed/input_image.jpg"
+                subprocess.call(delete_unprocess_cmd, shell=True)
 
                 try:
                     # Send message to Request Queue
@@ -204,7 +208,7 @@ def main():
             # ===== [Step 2.3] Barbershop 추론 =====
             print('barbershop 호출')
             os.chdir("/home/ubuntu/Barbershop-Plus-Plus/Barbershop/")
-            inference_cmd = 'python3 main.py --im_path1 input_image.png --sign realistic --smooth 1'
+            inference_cmd = 'python3 main.py --im_path1 input_image.png --sign realistic --smooth 5'
             subprocess.call(inference_cmd, shell=True)
 
             # ===== [Step 3] S3에 inference된 결과 이미지 업로드(presigned url 발급 + s3에 다운로드) =====
@@ -223,26 +227,8 @@ def main():
                 # If successful, returns HTTP status code 204
                 logging.info(f'File upload HTTP status code: {http_response.status_code}')
             
-
-            # ===== [Step 4] 메시지 송신 =====
-            success_msg_json = {
-                'result' : 'success',
-                'memberId' : param_member_id,
-                'virtualMemberImageId' : param_virtual_member_image_id
-            }
-
-            success_message_body_str = json.dumps(success_msg_json)
-
-            try:
-                # Send message to Request Queue
-                response_queue.send_message(MessageBody=success_message_body_str, QueueUrl=AWS_RESPONSE_SQS_URL)
-                logger.info("Send message success! (Message body : { result : %s, memberId : %s, virtualMemberImageId : %s })", 'success', param_member_id, param_virtual_member_image_id)
-            except ClientError as error:
-                logger.exception("Send message failed! (Message body : { result : %s, memberId : %s, virtualMemberImageId : %s })", 'success', param_member_id, param_virtual_member_image_id)
-
-                raise error
             
-            # ===== [Step 5] inference 된 결과 및 input 이미지 데이터 지우기 =====
+            # ===== [Step 4] inference 된 결과 및 input 이미지 데이터 지우기 =====
             # unprocessed
             delete_preprocessing_input_cmd = 'rm ' + '/home/ubuntu/Barbershop-Plus-Plus/Barbershop/unprocessed/input_image.jpg'
             subprocess.call(delete_preprocessing_input_cmd, shell=True)
@@ -281,6 +267,23 @@ def main():
             for i in range(reference_cnt):
                 delete_result_real_cmd = 'rm ' + '/home/ubuntu/Barbershop-Plus-Plus/Barbershop/output/input_image_' + str(i + 1) + '_' + str(i + 1) + '_realistic.png'
                 subprocess.call(delete_result_real_cmd, shell=True)
+            
+             # ===== [Step 5] 메시지 송신 =====
+            success_msg_json = {
+                'result' : 'success',
+                'memberId' : param_member_id,
+                'virtualMemberImageId' : param_virtual_member_image_id
+            }
+
+            success_message_body_str = json.dumps(success_msg_json)
+            try:
+                # Send message to Request Queue
+                response_queue.send_message(MessageBody=success_message_body_str, QueueUrl=AWS_RESPONSE_SQS_URL)
+                logger.info("Send message success! (Message body : { result : %s, memberId : %s, virtualMemberImageId : %s })", 'success', param_member_id, param_virtual_member_image_id)
+            except ClientError as error:
+                logger.exception("Send message failed! (Message body : { result : %s, memberId : %s, virtualMemberImageId : %s })", 'success', param_member_id, param_virtual_member_image_id)
+
+                raise error
 
 if __name__ == "__main__":
 	main()
