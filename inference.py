@@ -100,7 +100,7 @@ def main():
         # ============= [Step 1] 메시지 수신 =============
         messages = response_queue.meta.client.receive_message(
             QueueUrl=AWS_REQUEST_SQS_URL,
-            MaxNumberOfMessages=2,
+            MaxNumberOfMessages=1,
             WaitTimeSeconds=2,
             MessageAttributeNames=['All']
         )
@@ -112,18 +112,14 @@ def main():
             data = message['Body']
             data = json.loads(data)
 
-            logger.info("Message from Request Queue : ", data)
-
-            request_queue.meta.client.delete_message(
-                QueueUrl=AWS_REQUEST_SQS_URL,
-                ReceiptHandle=message['ReceiptHandle']
-            )
+            print("Message from Request Queue : ", data)
 
             param_member_id = data['memberId']
             param_virtual_member_image_id = data['virtualMemberImageId']
 
             # AWS S3로부터 유저 이미지 다운로드
             download_image_from_s3(param_member_id, param_virtual_member_image_id)
+            print("input image download complete from s3 (memberId:" + str(param_member_id) + ", virtualMemberImageId:" + str(param_virtual_member_image_id) + ")")
 
             # =================== [Step 2] Barbershop++ 추론 ===================
             # ===== [Step 2.1] face_alignment 실행 - Barbershop.align_face.py (만약, 얼굴이 인식되지 않으면, 얼굴 인식되지 않았다는 에러 메시지 SQS로 송신한다) =====
@@ -191,9 +187,16 @@ def main():
                     # Send message to Request Queue
                     response_queue.send_message(MessageBody=fail_message_body_str, QueueUrl=AWS_RESPONSE_SQS_URL)
                     logger.info("Send fail message success! (Message body : { result : %s, memberId : %s , virtualMemberImageId : %s})", "fail", param_member_id, param_virtual_member_image_id)
+                    
+                    request_queue.meta.client.delete_message(
+                        QueueUrl=AWS_REQUEST_SQS_URL,
+                        ReceiptHandle=message['ReceiptHandle']
+                    )
+                    
                     continue
                 except ClientError as error:
                     logger.exception("Send fail message failed! (Message body : { result : %s, memberId : %s , virtualMemberImageId : %s})", "fail", param_member_id, param_virtual_member_image_id)
+                    
                     continue
             
 
@@ -274,6 +277,11 @@ def main():
                 'memberId' : param_member_id,
                 'virtualMemberImageId' : param_virtual_member_image_id
             }
+
+            request_queue.meta.client.delete_message(
+                QueueUrl=AWS_REQUEST_SQS_URL,
+                ReceiptHandle=message['ReceiptHandle']
+            )
 
             success_message_body_str = json.dumps(success_msg_json)
             try:
